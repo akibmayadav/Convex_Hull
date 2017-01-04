@@ -1,0 +1,180 @@
+<!-- 
+    
+CONVEX HULLING PART 1
+FINAL PROJECT 200C
+FALL 2016
+Ambika Yadav
+
+Developed using the GRAHAM SCAN ALGORITHM TO MAKE CONVEX HULLS FOR N POINTS . 
+
+IMPLEMENTATION PART 1 : 
+    FEATURES :
+    1. ABILITY TO DRAW ADD POINTS USING MOUSE AND SEE HOW CONVEX HULL IS CREATED. 
+    2. THE INTERACTIONS USING CONTROL BOX . SPEED, SPREAD, NUMBER OF POINTS.
+
+References :
+1.http://www.math.ucsd.edu/~ronspubs/72_10_convex_hull.pdf
+2.https://threejs.org/docs/
+3.http://stackoverflow.com/questions/13055214/mouse-canvas-x-y-to-three-js-world-x-y-z
+4.https://www.youtube.com/watch?v=QYrpHE8iDGg
+
+-->
+
+<head>
+    <title>CONVEX HULL IMPLEMENTATION : MOUSE INTERACTIONS</title>
+    <style>
+        body {
+           
+            margin: 0;
+        }
+
+        #info {
+                 font-family:Monospace;
+                font-size:20px;
+                text-align:center;
+                position: absolute;
+                top: 0px; width: 100%;
+                padding: 5px;
+                color: #ddd;
+                rgba(0,0,0,1);
+            }
+
+        canvas {
+            background:#ffffff
+            width: 100%;
+            height: 100%
+        }
+    </style>
+</head>
+ <div id="info">
+
+            PART 1 <br/>
+            CONVEX HULL IMPLEMENTATION : MOUSE INTERACTIONS<br/>
+            Ambika Yadav<br/>
+            Implementation of Convex Hull using Graham Scan Algorithm
+</div>
+
+<body>
+   
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r72/three.min.js"></script>
+<script src="../../dat.gui-master/build/dat.gui.min.js"></script>
+<script src="../../Source_Files/orbitcontrols.js"></script>
+<script src="../../Source_Files/tween.js"></script>
+<script src="convex_hull.js"></script>
+<script src="helpers_to_draw_convex.js"></script>
+<script>
+
+
+ var scene = new THREE.Scene();
+ var camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 6000);
+
+var frame_counter = 0;
+var number_of_points = 5; 
+var number_of_points_range = 200;
+var progress = 0.0;
+var trial_variable = 0 ; 
+
+var x_min = -window.innerWidth/2;
+var x_max = window.innerWidth/2;
+var y_min = -window.innerHeight/2;
+var y_max = window.innerHeight/2;
+var convex_hull_arrays = points_for_hull(number_of_points,x_min,x_max,y_min,y_max);  // making random points to determine convex hull
+var extra_points = points_for_hull(number_of_points_range+20,x_min,x_max,y_min,y_max); // static extra random points to add if more number of points are desired. 
+var colors = 0xC70039 ;
+
+var renderer = new THREE.WebGLRenderer();
+renderer.setClearColor( 0x404040);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+
+/* GUI For the following :
+
+    BUTTON LIKE
+    1. Option to start and stop animation .
+    2. Switch between line and Mesh 
+    3. Switch between manual addition or random addition of points only if one convex hull is present. 
+
+    SLIDER LIKE
+    1. Speed and Spread . 
+
+*/
+
+var guiControls = new function()
+    {
+        this.Animation = 1;
+        this.Speed =50;
+        this.Spread =50;
+        this.CameraX = 0;
+        this.CameraY = 0;
+        this.CameraZ = 1000;
+        this.Line_Mesh = 1;
+        this.Points = number_of_points ;
+    }
+
+var length_of_num = convex_hull_arrays.length;
+var datGUI = new dat.GUI();
+datGUI.add(guiControls ,'Animation' ,0,1);
+datGUI.add(guiControls ,'Speed' ,0,100);
+datGUI.add(guiControls ,'Spread' ,0,300);
+datGUI.add(guiControls ,'CameraX' ,-500,500);
+datGUI.add(guiControls ,'CameraY' ,-500,500);
+datGUI.add(guiControls ,'CameraZ' ,1000,2000);
+datGUI.add(guiControls ,'Line_Mesh' ,0,1);
+datGUI.add(guiControls ,'Points',length_of_num,length_of_num+number_of_points_range);
+
+ var render = function () {
+
+        requestAnimationFrame(render);
+        camera.position.x = guiControls.CameraX; 
+        camera.position.y = guiControls.CameraY; 
+        camera.position.z = guiControls.CameraZ;  
+        frame_counter += 1;
+        // animate every 5th frame , depending on whether GUI animation variable . 
+        if (frame_counter%5 ==0)
+        {
+            trial_variable +=1;
+            if (guiControls.Animation > 0)
+            {
+            progress+= 0.05; // animated
+            }
+            else if (guiControls.Animation == 0)
+            {
+            progress = 0 ; // not animated
+            }
+            update(); // update the scene for next rendering . Mostly removing pre exsisting geometries and textures. 
+            var e_points = extra_points.slice(0,guiControls.Points-length_of_num); // get the required number of extra points for the main array holder .
+            convex_hull_arrays = convex_hull_arrays.concat(e_points); // add the extra points to the main array .
+            recall(convex_hull_arrays,colors,Math.floor(guiControls.Speed),Math.floor(guiControls.Spread),Math.floor(guiControls.Line_Mesh)); // draw the scene 
+            convex_hull_arrays = convex_hull_arrays.slice(0,length_of_num); // update main array by removing extra points addition for next frame .
+        } 
+        renderer.render(scene, camera);
+    };
+
+// MOUSE INTERACTIONS TO ADD POINTS
+window.addEventListener('click', onMouseDown, false);
+var mouse = new THREE.Vector2();
+function onMouseDown(event) {
+                update();
+                var vector = new THREE.Vector3();
+                mouse.x = event.clientX ;
+                mouse.y = event.clientY ;
+                vector.set(
+                        ( mouse.x / window.innerWidth ) * 2 - 1,
+                        - ( mouse.y / window.innerHeight ) * 2 + 1,
+                         0.5 );
+                vector.unproject( camera );
+                var dir = vector.sub( camera.position ).normalize();
+                var distance = - camera.position.z / dir.z;
+                var pos = camera.position.clone().add( dir.multiplyScalar( distance ) ); // 2D position of mouse on canvas to 3D position of the same in the 3D scene .
+                convex_hull_arrays.push(pos); // Push the mouse position to main array on mouse click 
+                length_of_num +=1;
+                guiControls.Points +=1;
+                convex_hull_arrays = convex_hull_arrays.slice(0,length_of_num); // remove points to get ready for next rendering . 
+            }
+ 
+
+render();
+</script>
+</body>
+</html>

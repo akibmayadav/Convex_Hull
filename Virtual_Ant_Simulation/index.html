@@ -1,0 +1,147 @@
+<head>
+    <title>CONVEX HULL IMPLEMENTATION : VIRTUAL ANT SIMULATION</title>
+    <style>
+        body {
+           
+            margin: 0;
+        }
+
+        #info {
+                 font-family:Monospace;
+                font-size:20px;
+                text-align:center;
+                position: absolute;
+                top: 0px; width: 100%;
+                padding: 5px;
+                color: #ddd;
+                rgba(0,0,0,1);
+            }
+
+        canvas {
+            background:#ffffff
+            width: 100%;
+            height: 100%
+        }
+    </style>
+</head>
+ <div id="info">
+            PART 2 <br/>
+            CONVEX HULL IMPLEMENTATION : VIRTUAL ANT SIMULATION<br/>
+            Ambika Yadav<br/>
+            Implementation of Convex Hull using Graham Scan Algorithm
+</div>
+
+<body>
+   
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r72/three.min.js"></script>
+<script src="../../dat.gui-master/build/dat.gui.min.js"></script>
+<script src="../../Source_Files/orbitcontrols.js"></script>
+<script src="../../Source_Files/tween.js"></script>
+<script src="virtual_ant_simulation.js"></script>
+<script src="helpers_to_draw_convex.js"></script>
+<script>
+
+
+ var scene = new THREE.Scene();
+ var camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 6000);
+
+var frame_counter = 0;
+var number_of_points = 70; 
+var progress = 0.0;
+var trial_variable = 0 ; 
+
+var x_min_array = new Array();
+var x_max_array = new Array();
+var y_min_array = new Array();
+var y_max_array = new Array();
+var convex_hull_arrays = new Array();
+var colors = new Array ();
+colors.push(0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb,0xC70039,0x6ac9bb)
+
+x_min_array.push(-window.innerWidth,-window.innerWidth*2/3,-window.innerWidth/3,0,window.innerWidth/3,window.innerWidth*2/3);
+x_max_array.push(-window.innerWidth*2/3,-window.innerWidth/3,0,window.innerWidth/3,window.innerWidth*2/3,window.innerWidth);
+y_min_array.push(-window.innerHeight,-window.innerHeight*2/3,-window.innerHeight/3,0,window.innerHeight/3,window.innerHeight*2/3);
+y_max_array.push(-window.innerHeight*2/3,-window.innerHeight/3,0,window.innerHeight/3,window.innerHeight*2/3,window.innerHeight);
+
+
+convex_hull_arrays[0]=points_for_hull(number_of_points,x_min_array[2],x_max_array[2],y_min_array[2],y_max_array[2]);
+for ( var row = 0 ; row < 6 ; row++)
+{
+    for( var col = 0 ; col <6 ;col++)
+    {
+        convex_hull_arrays[row*6+col+1]= points_for_hull(number_of_points,x_min_array[row],x_max_array[row],y_min_array[col],y_max_array[col]);
+    }
+}
+
+var renderer = new THREE.WebGLRenderer();
+renderer.setClearColor( 0x404040);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+
+
+/* GUI For the following :
+
+    BUTTON LIKE
+    1. Option to start and stop animation .
+    2. Switch between line and Mesh 
+    3. Switch between manual addition or random addition of points only if one convex hull is present. 
+
+    SLIDER LIKE
+    1. Speed and Spread . 
+
+*/
+
+var guiControls = new function()
+    {
+        this.Animation = 1;
+        this.Speed =50;
+        this.Spread =155;
+        this.CameraX = 0;
+        this.CameraY = 0;
+        this.CameraZ = 1000;
+        this.NumberOfConvexHulls = 37 ; 
+        this.Line_Mesh = 1;
+    }
+
+var datGUI = new dat.GUI();
+datGUI.add(guiControls ,'Animation' ,0,1);
+datGUI.add(guiControls ,'Speed' ,0,100);
+datGUI.add(guiControls ,'Spread' ,0,300);
+datGUI.add(guiControls ,'CameraX' ,-500,500);
+datGUI.add(guiControls ,'CameraY' ,-500,500);
+datGUI.add(guiControls ,'CameraZ' ,0,1000);
+datGUI.add(guiControls ,'NumberOfConvexHulls' ,1,convex_hull_arrays.length);
+datGUI.add(guiControls ,'Line_Mesh' ,0,1);
+
+ var render = function () {
+        requestAnimationFrame(render);
+        camera.position.x = guiControls.CameraX; 
+        camera.position.y = guiControls.CameraY; 
+        camera.position.z = guiControls.CameraZ;   
+        frame_counter += 1;
+        if (frame_counter%5 ==0)
+        {
+            trial_variable +=1;
+            if (guiControls.Animation > 0)
+            {
+            progress+= 0.05; // animated
+            }
+            else if (guiControls.Animation == 0)
+            {
+            progress = 0 ; // not animated
+            }
+            update();
+            for ( var a = 0 ; a<Math.floor(guiControls.NumberOfConvexHulls) ;a++)
+            {
+
+                recall(convex_hull_arrays[a],colors[a],Math.floor(guiControls.Speed),Math.floor(guiControls.Spread),Math.floor(guiControls.Line_Mesh));
+            }
+        } 
+        renderer.render(scene, camera);
+    };
+
+render();
+</script>
+</body>
+</html>
